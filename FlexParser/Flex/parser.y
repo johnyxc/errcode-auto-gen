@@ -1,0 +1,187 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../Parser/parser.h"
+
+extern int yylineno;
+extern int yylex();
+extern void yyset_in(FILE* _in_str);
+
+int yyparse();
+
+void process_global_comment(const char* fn);
+void process_single_line_comment(const char* fn);
+void process_create_new_file(const char* fn);
+void process_cmd(const char* fn);
+
+void yyerror(const char* str) {
+    fprintf(stderr, " error: %s, Line: %d\n", str, yylineno);
+}
+
+int yywrap() {
+    return 1;
+}
+
+int main(int argc, char** argv)
+{
+	--argc;
+    ++argv;
+    if (argc > 0)
+	{
+        yyset_in(fopen(argv[0], "r"));
+	}
+    else
+	{
+        yyset_in(fopen("errors.edef", "r"));
+	}
+
+	--argc;
+	++argv;
+	if (argc > 0)
+	{
+		jf_cmd_parser_t::instance()->set_target_type(argv[0]);
+	}
+	else
+	{
+		jf_cmd_parser_t::instance()->set_target_type(g_tar_cpp.c_str());
+	}
+
+	--argc;
+	++argv;
+	if (argc > 0)
+	{
+		jf_cmd_parser_t::instance()->set_multiple_file(argv[0]);
+	}
+	else
+	{
+		jf_cmd_parser_t::instance()->set_multiple_file(g_sig_file.c_str());
+	}
+
+    yyparse();
+	jf_cmd_parser_t::instance()->output();
+	system("pause");
+}
+%}
+
+%token GLOBALCMT SGLINECMT
+%token INDEX FILENAME TAKEBITS
+%token CMDNAME
+
+%%
+commands: /* empty */
+	| commands command
+	;
+
+	command:
+		global_comment
+		|
+		single_line_comment
+		|
+		create_new_file
+		|
+		generate_command
+		;
+
+	global_comment:
+		GLOBALCMT
+		{
+			process_global_comment((char*)yylval);
+			printf("Global Comment : %s\n", (char*)yylval);
+		}
+		;
+
+	single_line_comment:
+		SGLINECMT
+		{
+			process_single_line_comment((char*)yylval);
+			printf("Single Line Comment : %s\n", (char*)yylval);
+		}
+		;
+
+	create_new_file:
+		FILENAME
+		{
+			process_create_new_file((char*)yylval);
+		}
+		;
+
+	generate_command:
+		CMDNAME
+		{
+			process_cmd((char*)yylval);
+		}
+		;
+%%
+
+static int stage = 1;
+static int cmd_idx = 0;
+static int treat_as_sigleline_cmt = 0;
+
+void process_global_comment(const char* cont)
+{
+	printf("process_global_comment tasc %d cur_line %d\n", treat_as_sigleline_cmt, yylineno);
+	if (treat_as_sigleline_cmt == yylineno) {
+		process_single_line_comment(cont);
+		treat_as_sigleline_cmt = 0;
+	} else {
+		jf_cmd_parser_t::instance()->set_global_comment(cont);
+	}
+}
+
+void process_single_line_comment(const char* cont)
+{
+	jf_cmd_parser_t::instance()->set_single_line_comment(cont, yylineno);
+}
+
+void process_index(const char* cont)
+{
+	stage = 0;
+	if (stage != 0)
+	{
+		yyerror("Syntax Error");
+		system("pause");
+		exit(0);
+	}
+	else
+	{
+		++stage;
+		printf("Index : %s\n", cont);
+	}
+}
+
+void process_create_new_file(const char* cont)
+{
+	stage = 1;
+	cmd_idx = 0;
+	if (stage != 1)
+	{
+		yyerror("Syntax Error");
+		system("pause");
+		exit(0);
+	}
+	else
+	{
+		stage = 2;
+		treat_as_sigleline_cmt = yylineno;
+		jf_cmd_parser_t::instance()->set_file_name(cont, yylineno);
+		printf("New File Name : %s\n", cont);
+	}
+}
+
+void process_cmd(const char* cont)
+{
+	if (stage != 2)
+	{
+		yylineno -= 1;
+		yyerror("Syntax Error");
+		system("pause");
+		exit(0);
+	}
+	else
+	{
+		treat_as_sigleline_cmt = yylineno;
+		jf_cmd_parser_t::instance()->set_cmd_name(cont, yylineno, cmd_idx++);
+		printf("Cmd Name : %s\n", cont);
+	}
+}

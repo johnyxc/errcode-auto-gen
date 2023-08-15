@@ -1,0 +1,24 @@
+﻿/*
+*	错误码定义文件
+*/
+
+[center_err_base]					/*中心基础模块*/
+ok 		= 0;						/*成功*/
+param 	= 0x01000001;				/*参数错误*/
+init;								/*初始化失败*/
+cache;								/*缓存操作失败*/
+mq;									/*Mq操作失败*/
+db;									/*Db操作失败*/
+gw_init;							/*Gateway初始化失败*/
+db_record_empty;					/*结果集为空*/
+unknow;								/*未知错误*/
+not_support;						/*暂不支持*/
+taskpool_full;						/*任务池已满*/
+cache_record_empty;					/*缓存键值不存在*/
+json;								/*Json解析或序列化失败*/
+page_exceeded;						/*数据页数超过限制*/
+timeout;							/*执行超时*/
+ownership;							/*所有权已变更*/
+key_duplicate;						/*Key已存在*/
+remote_api;							/*外部接口调用错误*/
+taskpool_exe;						/*任务池执行错误*/
